@@ -20,12 +20,13 @@ HOST = "192.168.1.91"
 HOST_2 = "192.168.1.92"
 SERIAL = "2201010001"
 NAME = "LG RESU16H 1"
-PAGES = ("getbmsinfo", "getversion", "getbmsdata")
+PAGES = ("getbmsinfo", "getversion", "getbmsdata", "showapinfo")
 
 
 def page(pack: str, name: str) -> bytes:
-    """A page saved from a live RMD (pack91 or pack92)."""
-    return (FIXTURES / f"{pack}-{name}.html").read_bytes()
+    """A page saved from a live RMD (pack91 or pack92); /showapinfo is JSON."""
+    suffix = "json" if name == "showapinfo" else "html"
+    return (FIXTURES / f"{pack}-{name}.{suffix}").read_bytes()
 
 
 def mock_pack(aioclient_mock: AiohttpClientMocker, host: str, pack: str) -> None:

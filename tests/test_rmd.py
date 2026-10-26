@@ -131,3 +131,38 @@ def test_truncated_page_rejected():
     tail = page[page.index("<tr><td>Cell[1]Voltage") :]
     with pytest.raises(rmd.RmdResponseError):
         rmd.parse_bms_data(tail, required)
+
+
+def test_parse_wifi():
+    wifi = rmd.parse_wifi((FIXTURES / "pack92-showapinfo.json").read_text())
+    assert (wifi.rssi, wifi.channel, wifi.bssid) == (-75, 6, "02:00:00:00:00:02")
+    assert wifi.ssid == "example-wifi"
+    assert wifi.connected
+
+
+def test_parse_wifi_not_connected():
+    # Not observed on these packs (both on Wi-Fi): an empty SSID is what the
+    # RMD's own UI treats as "WiFi is not connected!", e.g. on Ethernet.
+    wifi = rmd.parse_wifi('{"state":0,"ssid":"","bssid":"","channel":0,"rssi":0}')
+    assert not wifi.connected
+    assert wifi.rssi is None
+
+
+@pytest.mark.parametrize(
+    "text", ["Moved to /login.html", '{"state":1}', "[]", '{"state":0,"rssi":"x"}']
+)
+def test_parse_wifi_rejects_or_degrades(text):
+    if text == '{"state":0,"rssi":"x"}':
+        assert rmd.parse_wifi(text).rssi is None  # no SSID, so not connected
+    else:
+        with pytest.raises(rmd.RmdResponseError):
+            rmd.parse_wifi(text)
+
+
+def test_showapinfo_is_the_only_new_path():
+    assert rmd.READ_ONLY_PATHS == {
+        "/getbmsdata",
+        "/getbmsinfo",
+        "/getversion",
+        "/showapinfo",
+    }

@@ -24,7 +24,7 @@ from custom_components.lg_resu_rmd.rmd import (
     RmdResponseError,
 )
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE
+from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.setup import async_setup_component
@@ -133,8 +133,8 @@ async def test_cells_and_probes_disabled_by_default(
         assert hass.states.get(entry.entity_id) is None
     assert registry.async_get(f"sensor.{E}_cell_70_voltage") is not None
     assert registry.async_get(f"sensor.{E}_temperature_8") is not None
-    # 27 summary sensors, 70 cells, 8 probes, 1 problem sensor.
-    assert len(entries) == 27 + 70 + 8 + 1
+    # 27 summary sensors, Wi-Fi signal, 70 cells, 8 probes, 1 problem sensor.
+    assert len(entries) == 27 + 1 + 70 + 8 + 1
 
 
 async def test_problem_sensor_off(
@@ -157,7 +157,7 @@ async def test_problem_sensor_on(
         b"<td>DiagResultHwWarning</td><td>0x00000000</td>",
         b"<td>DiagResultHwWarning</td><td>0x00000010</td>",
     )
-    for name in ("getbmsinfo", "getversion"):
+    for name in ("getbmsinfo", "getversion", "showapinfo"):
         aioclient_mock.get(f"http://{HOST}/{name}", content=page("pack91", name))
     aioclient_mock.get(f"http://{HOST}/getbmsdata", content=bad)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
@@ -167,7 +167,7 @@ async def test_problem_sensor_on(
     assert state.attributes["DiagResultHwWarning"] == "0x00000010"
 
 
-async def test_one_request_per_poll_and_read_only(
+async def test_two_requests_per_poll_and_read_only(
     hass: HomeAssistant,
     setup_entry: MockConfigEntry,
     mock_rmd: AiohttpClientMocker,
@@ -175,7 +175,12 @@ async def test_one_request_per_poll_and_read_only(
 ) -> None:
     calls_after_setup = mock_rmd.call_count
     await _poll(hass, freezer)
-    assert mock_rmd.call_count == calls_after_setup + 1
+    # /getbmsdata, then /showapinfo.
+    assert mock_rmd.call_count == calls_after_setup + 2
+    assert [url.path for _m, url, _d, _h in mock_rmd.mock_calls[-2:]] == [
+        "/getbmsdata",
+        "/showapinfo",
+    ]
     for method, url, _data, _headers in mock_rmd.mock_calls:
         assert method == "GET"
         assert url.path in READ_ONLY_PATHS
@@ -250,9 +255,71 @@ async def test_diagnostics(
     assert await async_setup_component(hass, "diagnostics", {})
     diag = await get_diagnostics_for_config_entry(hass, hass_client, setup_entry)
     assert diag["entry"]["data"] == {"host": HOST}
-    assert diag["bms_info"]["BMS Serial Number"] == SERIAL
+    assert diag["bms_info"]["BMS Serial Number"] == "**REDACTED**"
+    assert diag["bms_info"]["Pack Part Number"] == "**REDACTED**"
+    assert diag["bms_info"]["Battery Name"] == "RESU16H Prime"
     assert diag["bms_data"]["HWInput"] == "0x60001000"
     assert len(diag["bms_data"]) == 147
+    assert diag["wifi"] == {
+        "connected": True,
+        "rssi": -63,
+        "ssid": "**REDACTED**",
+        "bssid": "**REDACTED**",
+        "channel": 1,
+    }
+    assert SERIAL not in str(diag)
+
+
+async def test_wifi_signal_sensor(
+    hass: HomeAssistant, setup_entry: MockConfigEntry
+) -> None:
+    state = hass.states.get(f"sensor.{E}_wi_fi_signal")
+    assert state.state == "-63"
+    assert state.attributes["unit_of_measurement"] == "dBm"
+    assert state.attributes["device_class"] == "signal_strength"
+    assert state.attributes["ssid"] == "example-wifi"
+    assert state.attributes["bssid"] == "02:00:00:00:00:01"
+    assert state.attributes["channel"] == 1
+    entry = er.async_get(hass).async_get(f"sensor.{E}_wi_fi_signal")
+    assert entry.disabled_by is None
+    assert entry.entity_category is EntityCategory.DIAGNOSTIC
+
+
+async def test_wifi_failure_leaves_battery_data_available(
+    hass: HomeAssistant,
+    setup_entry: MockConfigEntry,
+    mock_rmd: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    mock_rmd.clear_requests()
+    for name in ("getbmsinfo", "getversion", "getbmsdata"):
+        mock_rmd.get(f"http://{HOST}/{name}", content=page("pack91", name))
+    mock_rmd.get(f"http://{HOST}/showapinfo", exc=TimeoutError())
+    await _poll(hass, freezer)
+    assert _state(hass, f"sensor.{E}_wi_fi_signal") == STATE_UNAVAILABLE
+    assert _state(hass, f"sensor.{E}_soc") == "49.54"
+
+
+async def test_wifi_sensor_unavailable_when_not_on_wifi(
+    hass: HomeAssistant,
+    setup_entry: MockConfigEntry,
+    mock_rmd: AiohttpClientMocker,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    # An RMD on Ethernet: /showapinfo answers with an empty SSID.
+    mock_rmd.clear_requests()
+    for name in ("getbmsinfo", "getversion", "getbmsdata"):
+        mock_rmd.get(f"http://{HOST}/{name}", content=page("pack91", name))
+    mock_rmd.get(
+        f"http://{HOST}/showapinfo",
+        text='{"state":0,"ssid":"","bssid":"","channel":0,"rssi":0}',
+    )
+    await _poll(hass, freezer)
+    state = hass.states.get(f"sensor.{E}_wi_fi_signal")
+    assert state.state == STATE_UNAVAILABLE
+    assert "bssid" not in state.attributes
+    assert _state(hass, f"sensor.{E}_soc") == "49.54"
+    assert _state(hass, f"binary_sensor.{E}_problem") == STATE_OFF
 
 
 async def test_unload(hass: HomeAssistant, setup_entry: MockConfigEntry) -> None:

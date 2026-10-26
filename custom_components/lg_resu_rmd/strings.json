@@ -131,6 +131,9 @@
       },
       "probe_temperature": {
         "name": "Temperature {probe}"
+      },
+      "wifi_signal": {
+        "name": "Wi-Fi signal"
       }
     },
     "binary_sensor": {

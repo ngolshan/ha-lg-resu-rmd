@@ -1,9 +1,10 @@
 """Read-only client and parser for the LG RESU Prime RMD's local web pages.
 
 This module has no Home Assistant imports so the parser can be unit-tested on
-its own. It only ever issues GETs of the RMD's `get*` pages; the RMD's write
-and action endpoints (/factory, /rst, /setbmsmode, /dcdccmd, /cantx, ...) are
-never called.
+its own. It only ever issues GETs of four pages the RMD's own web UI reads for
+display (/getbmsdata, /getbmsinfo, /getversion, /showapinfo); the RMD's write
+and action endpoints (/factory, /rst, /setbmsmode, /dcdccmd, /cantx, /scanap,
+...) are never called.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 import html
+import json
 import re
 
 import aiohttp
@@ -19,7 +21,9 @@ import aiohttp
 PATH_BMS_DATA = "/getbmsdata"
 PATH_BMS_INFO = "/getbmsinfo"
 PATH_VERSION = "/getversion"
-READ_ONLY_PATHS = frozenset({PATH_BMS_DATA, PATH_BMS_INFO, PATH_VERSION})
+# The station link: SSID, BSSID, channel and RSSI of the AP the RMD joined.
+PATH_WIFI = "/showapinfo"
+READ_ONLY_PATHS = frozenset({PATH_BMS_DATA, PATH_BMS_INFO, PATH_VERSION, PATH_WIFI})
 
 # Pack 2 has taken up to 9 s to answer over Wi-Fi when it does answer.
 DEFAULT_TIMEOUT = 15
@@ -76,6 +80,44 @@ class RmdInfo:
     dcdc_fw_version: str | None
     rmd_version: str | None
     raw: dict[str, str]
+
+
+@dataclass(frozen=True)
+class RmdWifi:
+    """The RMD's Wi-Fi station link from /showapinfo.
+
+    An empty SSID means the RMD isn't on Wi-Fi (its own web UI shows "WiFi is
+    not connected!" then), e.g. when it uses Ethernet; any RSSI is ignored.
+    """
+
+    connected: bool
+    rssi: int | None
+    ssid: str | None
+    bssid: str | None
+    channel: int | None
+
+
+def parse_wifi(text: str) -> RmdWifi:
+    """Parse /showapinfo, e.g. {"state":0,"ssid":..,"bssid":..,"channel":6,"rssi":-75}."""
+    try:
+        raw = json.loads(text)
+    except ValueError as err:
+        raise RmdResponseError(f"/showapinfo is not JSON: {err}") from err
+    if not isinstance(raw, dict) or raw.get("state") != 0:
+        raise RmdResponseError(f"/showapinfo returned {text[:80]!r}")
+
+    def _int(key: str) -> int | None:
+        value = raw.get(key)
+        return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+    connected = bool(raw.get("ssid"))
+    return RmdWifi(
+        connected=connected,
+        rssi=_int("rssi") if connected else None,
+        ssid=raw.get("ssid") or None,
+        bssid=raw.get("bssid") or None,
+        channel=_int("channel"),
+    )
 
 
 def parse_rows(text: str) -> dict[str, str]:
@@ -246,6 +288,10 @@ class RmdClient:
     async def async_get_bms_data(self) -> dict[str, str]:
         """One GET of /getbmsdata, parsed."""
         return parse_bms_data(await self._get(PATH_BMS_DATA), self._required)
+
+    async def async_get_wifi(self) -> RmdWifi:
+        """One GET of /showapinfo, parsed."""
+        return parse_wifi(await self._get(PATH_WIFI))
 
     async def async_get_info(self) -> RmdInfo:
         """GET /getbmsinfo then /getversion, one after the other.

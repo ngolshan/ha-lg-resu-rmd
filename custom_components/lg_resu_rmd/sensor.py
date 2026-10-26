@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -13,6 +14,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import (
     PERCENTAGE,
+    SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     EntityCategory,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
@@ -243,7 +245,9 @@ async def async_setup_entry(
         *(_cell_sensor(n) for n in cell_numbers(coordinator.data)),
         *(_probe_sensor(n) for n in probe_numbers(coordinator.data)),
     ]
-    async_add_entities(RmdSensor(coordinator, d) for d in descriptions)
+    async_add_entities(
+        [*(RmdSensor(coordinator, d) for d in descriptions), RmdWifiSensor(coordinator)]
+    )
 
 
 class RmdSensor(RmdEntity, SensorEntity):
@@ -264,3 +268,35 @@ class RmdSensor(RmdEntity, SensorEntity):
     @property
     def native_value(self) -> StateType:
         return self.entity_description.value_fn(self.coordinator.data)
+
+
+class RmdWifiSensor(RmdEntity, SensorEntity):
+    """RSSI of the RMD's Wi-Fi link from /showapinfo; SSID, BSSID, channel as attributes."""
+
+    _attr_translation_key = "wifi_signal"
+    _attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
+    _attr_native_unit_of_measurement = SIGNAL_STRENGTH_DECIBELS_MILLIWATT
+    _attr_state_class = MEAS
+    _attr_entity_category = DIAG
+    _attr_suggested_display_precision = 0
+
+    def __init__(self, coordinator: RmdCoordinator) -> None:
+        super().__init__(coordinator, "wifi_signal")
+
+    @property
+    def available(self) -> bool:
+        # Unavailable when the read failed or the RMD isn't on Wi-Fi (Ethernet).
+        wifi = self.coordinator.wifi
+        return super().available and wifi is not None and wifi.connected
+
+    @property
+    def native_value(self) -> int | None:
+        wifi = self.coordinator.wifi
+        return wifi.rssi if wifi else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        wifi = self.coordinator.wifi
+        if wifi is None or not wifi.connected:
+            return {}
+        return {"ssid": wifi.ssid, "bssid": wifi.bssid, "channel": wifi.channel}

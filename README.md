@@ -9,9 +9,9 @@ Tested against two RESU16H Prime packs (BMS app 0x02060304, RMD 4.2.1, DC-DC FW 
 ## What it does
 
 - **One config entry and one device per pack,** added by IP address in the UI. The device's unique ID is the BMS serial number, so a changed IP is a *Reconfigure*, not a new device.
-- **Each poll is one `GET /getbmsdata` per pack,** fed to every entity through a DataUpdateCoordinator. The device info comes from `/getbmsinfo` and `/getversion`, read once at setup.
+- **Each poll is one `GET /getbmsdata` per pack,** fed to every entity through a DataUpdateCoordinator, then one small `GET /showapinfo` for the Wi-Fi signal. A failed Wi-Fi read only makes the Wi-Fi signal sensor unavailable. The device info comes from `/getbmsinfo` and `/getversion`, read once at setup.
 - **Poll interval** is set in *Configure* (the options flow): 30–3600 s, default 300 s.
-- **Strictly read-only.** The client refuses any path except `/getbmsdata`, `/getbmsinfo` and `/getversion`. It never calls the RMD's write or action endpoints (`/factory`, `/rst`, `/setbmsmode`, `/dcdccmd`, `/cantx`, `/clearSVDF`, ...).
+- **Strictly read-only.** The client refuses any path except `/getbmsdata`, `/getbmsinfo`, `/getversion` and `/showapinfo`, all pages the RMD's own web UI reads for display. It never calls the RMD's write or action endpoints (`/factory`, `/rst`, `/setbmsmode`, `/dcdccmd`, `/cantx`, `/clearSVDF`, ...), nor `/scanap`, which starts a Wi-Fi scan.
 
 ### Sensors
 
@@ -32,12 +32,13 @@ Tested against two RESU16H Prime packs (BMS app 0x02060304, RMD 4.2.1, DC-DC FW 
 | BPI / IPI voltage and current | `BPI_*`, `IPI_*` | DC-DC battery side and inverter side; diagnostic |
 | DC-DC temperature | `Temperature` | not the same field as `Temperature[n]`; diagnostic |
 | Shutdown reason | `ShutdownReason` | hex word as printed; diagnostic |
+| Wi-Fi signal | `/showapinfo` `rssi` | dBm; SSID, BSSID and channel as attributes; diagnostic. Unavailable when the RMD isn't on Wi-Fi (empty SSID, e.g. on Ethernet) |
 | Cell 1–70 voltage | `Cell[n]Voltage` | **disabled by default** |
 | Temperature 1–8 | `Temperature[n]` | **disabled by default** |
 
 **Problem** (binary sensor, diagnostic): on if any of the 11 alarm, warning or fault words is non-zero. The words are `DiagResultGeneralAlarm`, `DiagResultGeneralWarning`, `DiagResultFault1/2`, `DiagResultHwAlarm`, `DiagResultHwWarning`, `DiagResultHwFault1/2` and `DCDC Diag 1–3`. Each word is an attribute, as the page prints it.
 
-**Download diagnostics** on the device page returns the full last `/getbmsdata` page and the `/getbmsinfo` page, including the fields that have no entity (mode and control words, balancing targets, SVDF buffer, aux voltages).
+**Download diagnostics** on the device page returns the full last `/getbmsdata` page, the `/getbmsinfo` page and the Wi-Fi link (serial and part numbers, SSID and BSSID redacted), including the fields that have no entity (mode and control words, balancing targets, SVDF buffer, aux voltages).
 
 ## Quirks of the RMD this handles
 
