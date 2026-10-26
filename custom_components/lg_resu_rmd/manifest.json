@@ -1,0 +1,12 @@
+{
+  "domain": "lg_resu_rmd",
+  "name": "LG RESU Prime RMD",
+  "codeowners": ["@ngolshan"],
+  "config_flow": true,
+  "documentation": "https://github.com/ngolshan/ha-lg-resu-rmd",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/ngolshan/ha-lg-resu-rmd/issues",
+  "requirements": [],
+  "version": "0.1.1"
+}

@@ -1,0 +1,42 @@
+{
+  "entity": {
+    "sensor": {
+      "real_soc": {
+        "default": "mdi:battery",
+        "range": {
+          "0": "mdi:battery-outline",
+          "10": "mdi:battery-10",
+          "20": "mdi:battery-20",
+          "30": "mdi:battery-30",
+          "40": "mdi:battery-40",
+          "50": "mdi:battery-50",
+          "60": "mdi:battery-60",
+          "70": "mdi:battery-70",
+          "80": "mdi:battery-80",
+          "90": "mdi:battery-90",
+          "100": "mdi:battery"
+        }
+      },
+      "soh": { "default": "mdi:battery-heart-variant" },
+      "voltage": { "default": "mdi:current-dc" },
+      "min_cell_voltage": { "default": "mdi:current-dc" },
+      "max_cell_voltage": { "default": "mdi:current-dc" },
+      "avg_cell_voltage": { "default": "mdi:current-dc" },
+      "cell_voltage": { "default": "mdi:current-dc" },
+      "cell_spread": { "default": "mdi:arrow-expand-vertical" },
+      "min_cell_number": { "default": "mdi:arrow-down-bold-box-outline" },
+      "max_cell_number": { "default": "mdi:arrow-up-bold-box-outline" },
+      "min_temperature": { "default": "mdi:thermometer-low" },
+      "max_temperature": { "default": "mdi:thermometer-high" },
+      "charge_current_limit": { "default": "mdi:battery-arrow-up-outline" },
+      "charge_power_limit": { "default": "mdi:battery-arrow-up-outline" },
+      "discharge_current_limit": { "default": "mdi:battery-arrow-down-outline" },
+      "discharge_power_limit": { "default": "mdi:battery-arrow-down-outline" },
+      "cycle_count": { "default": "mdi:battery-sync" },
+      "lifetime_discharge_energy": { "default": "mdi:battery-arrow-down" },
+      "bpi_voltage": { "default": "mdi:current-dc" },
+      "ipi_voltage": { "default": "mdi:current-dc" },
+      "shutdown_reason": { "default": "mdi:power-off" }
+    }
+  }
+}

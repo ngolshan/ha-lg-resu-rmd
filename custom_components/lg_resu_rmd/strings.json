@@ -1,0 +1,142 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add an LG RESU Prime pack",
+        "description": "Enter the IP address of the pack's RMD. Only its read-only pages are requested.",
+        "data": {
+          "host": "IP address",
+          "name": "Name"
+        },
+        "data_description": {
+          "host": "The RMD's address on your LAN, e.g. 192.168.1.91.",
+          "name": "Device name, e.g. LG RESU16H 1."
+        }
+      },
+      "reconfigure": {
+        "title": "Change the pack's IP address",
+        "data": {
+          "host": "IP address"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the RMD (timed out or refused).",
+      "invalid_response": "The address answered, but not with the RMD's BMS pages."
+    },
+    "abort": {
+      "already_configured": "This pack is already configured.",
+      "reconfigure_successful": "IP address updated.",
+      "wrong_pack": "That address belongs to a different pack."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Polling",
+        "data": {
+          "scan_interval": "Poll interval"
+        },
+        "data_description": {
+          "scan_interval": "Seconds between reads of /getbmsdata (default 300)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "soc": {
+        "name": "SOC"
+      },
+      "real_soc": {
+        "name": "Real SOC"
+      },
+      "soh": {
+        "name": "SOH"
+      },
+      "voltage": {
+        "name": "Voltage"
+      },
+      "current": {
+        "name": "Current"
+      },
+      "power": {
+        "name": "Power"
+      },
+      "min_cell_voltage": {
+        "name": "Min cell voltage"
+      },
+      "max_cell_voltage": {
+        "name": "Max cell voltage"
+      },
+      "avg_cell_voltage": {
+        "name": "Avg cell voltage"
+      },
+      "cell_spread": {
+        "name": "Cell spread"
+      },
+      "min_cell_number": {
+        "name": "Lowest cell"
+      },
+      "max_cell_number": {
+        "name": "Highest cell"
+      },
+      "min_temperature": {
+        "name": "Min temperature"
+      },
+      "max_temperature": {
+        "name": "Max temperature"
+      },
+      "avg_temperature": {
+        "name": "Avg temperature"
+      },
+      "charge_current_limit": {
+        "name": "Charge current limit"
+      },
+      "discharge_current_limit": {
+        "name": "Discharge current limit"
+      },
+      "charge_power_limit": {
+        "name": "Charge power limit"
+      },
+      "discharge_power_limit": {
+        "name": "Discharge power limit"
+      },
+      "cycle_count": {
+        "name": "Cycle count"
+      },
+      "lifetime_discharge_energy": {
+        "name": "Lifetime discharge energy"
+      },
+      "bpi_voltage": {
+        "name": "BPI voltage"
+      },
+      "bpi_current": {
+        "name": "BPI current"
+      },
+      "ipi_voltage": {
+        "name": "IPI voltage"
+      },
+      "ipi_current": {
+        "name": "IPI current"
+      },
+      "dcdc_temperature": {
+        "name": "DC-DC temperature"
+      },
+      "shutdown_reason": {
+        "name": "Shutdown reason"
+      },
+      "cell_voltage": {
+        "name": "Cell {cell} voltage"
+      },
+      "probe_temperature": {
+        "name": "Temperature {probe}"
+      }
+    },
+    "binary_sensor": {
+      "problem": {
+        "name": "Problem"
+      }
+    }
+  }
+}
