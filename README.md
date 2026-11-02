@@ -54,25 +54,21 @@ These were observed on two packs in Oct 2026, not taken from LG documentation:
 
 ## Install
 
-**Manual:** copy `custom_components/lg_resu_rmd` into `/config/custom_components/`, so that `/config/custom_components/lg_resu_rmd/manifest.json` exists. On Home Assistant OS, the [Samba share](https://github.com/home-assistant/addons/blob/master/samba/DOCS.md) app is the easiest way to do that from Windows:
+### Marketplace
 
-1. Install it from *Settings → Apps → Install app → Samba share*. Set a `username` and `password` on its *Configuration* tab, then start it.
-2. Map the `config` share, for example in PowerShell (this prompts for the password):
-   ```powershell
-   net use H: \\HOMEASSISTANT\config * /user:USERNAME /persistent:yes
-   ```
-3. Copy the folder, leaving out `__pycache__`:
-   ```powershell
-   robocopy custom_components\lg_resu_rmd H:\custom_components\lg_resu_rmd /E /XD __pycache__
-   ```
+[![Open this repository in your Home Assistant's Marketplace.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ngolshan&repository=ha-lg-resu-rmd&category=integration)
 
-The File editor app is no help here, because it uploads one file at a time.
+Or search for *LG RESU Prime RMD* in the Marketplace. Download it, then restart Home Assistant.
 
-Then restart Home Assistant and go to *Settings → Devices & services → Add integration → LG RESU Prime RMD*. Add each pack by its RMD IP and give it a name. The entity IDs follow the name; for example, "LG RESU16H 1" gives `sensor.lg_resu16h_1_soc`.
+### Manual
 
-To update, copy the folder again the same way and restart.
+Copy `custom_components/lg_resu_rmd` from the [latest release](https://github.com/ngolshan/ha-lg-resu-rmd/releases/latest) into your Home Assistant `config/custom_components` folder, then restart Home Assistant.
 
-**HACS:** the repo has a `hacs.json`, but HACS can only add public repositories as custom repositories.
+## Setup
+
+[![Start setting up this integration in your Home Assistant.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=lg_resu_rmd)
+
+Or go to *Settings → Devices & services → Add integration → LG RESU Prime RMD*. Add each pack by its RMD IP and give it a name. The entity IDs follow the name; for example, "LG RESU16H 1" gives `sensor.lg_resu16h_1_soc`.
 
 ## Development
 
